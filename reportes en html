@@ -1,0 +1,86 @@
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectItem, SelectContent } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Download, Upload } from "lucide-react";
+import jsPDF from "jspdf";
+
+export default function ReportApp() {
+  const [reports, setReports] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("pendiente");
+
+  const handleAddReport = (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const newReport = {
+      id: Date.now(),
+      description: form.description.value,
+      status: form.status.value,
+      photos: Array.from(form.photos.files).map((file) => URL.createObjectURL(file))
+    };
+    setReports([newReport, ...reports]);
+    form.reset();
+  };
+
+  const handleDownloadPDF = (report) => {
+    const doc = new jsPDF();
+    doc.text("Informe", 10, 10);
+    doc.text("Descripción: " + report.description, 10, 20);
+    doc.text("Estado: " + report.status, 10, 30);
+    doc.save(`reporte_${report.id}.pdf`);
+  };
+
+  const filteredReports = reports.filter((r) => r.status === statusFilter);
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Gestor de Informes</h1>
+
+      <form onSubmit={handleAddReport} className="space-y-4 mb-6">
+        <Textarea name="description" placeholder="Descripción del informe" required />
+        <Select name="status" defaultValue="pendiente">
+          <SelectTrigger>Estado</SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pendiente">Pendiente</SelectItem>
+            <SelectItem value="en_revision">En Revisión</SelectItem>
+            <SelectItem value="concluido">Concluido</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input name="photos" type="file" multiple accept="image/*" />
+        <Button type="submit">Agregar Informe</Button>
+      </form>
+
+      <Tabs defaultValue="pendiente" onValueChange={setStatusFilter}>
+        <TabsList>
+          <TabsTrigger value="pendiente">Pendientes</TabsTrigger>
+          <TabsTrigger value="en_revision">En Revisión</TabsTrigger>
+          <TabsTrigger value="concluido">Concluidos</TabsTrigger>
+        </TabsList>
+
+        {['pendiente', 'en_revision', 'concluido'].map((status) => (
+          <TabsContent key={status} value={status} className="grid grid-cols-1 gap-4">
+            {filteredReports.map((report) => (
+              <Card key={report.id} className="p-4">
+                <CardContent>
+                  <p><strong>Descripción:</strong> {report.description}</p>
+                  <p><strong>Estado:</strong> {report.status}</p>
+                  <div className="flex gap-2 mt-2 overflow-x-auto">
+                    {report.photos.map((photo, i) => (
+                      <img key={i} src={photo} alt="Foto" className="w-24 h-24 object-cover rounded" />
+                    ))}
+                  </div>
+                  <Button onClick={() => handleDownloadPDF(report)} className="mt-4" variant="outline">
+                    <Download className="mr-2 h-4 w-4" /> Descargar PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+}
